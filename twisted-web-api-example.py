@@ -36,19 +36,31 @@ class HeavyResource(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader(b"Content-Type", b"application/json")
-        d = threads.deferToThread(long_blocking_task)
+        self.handle_request(request)
+        # d = threads.deferToThread(long_blocking_task)
 
-        def write_response(result):
-            request.write(json.dumps(result).encode("utf-8"))
-            request.finish()
+        # def write_response(result):
+        #     request.write(json.dumps(result).encode("utf-8"))
+        #     request.finish()
 
-        def handle_error(failure):
-            request.setResponseCode(500)
-            request.write(json.dumps({"error": str(failure)}).encode("utf-8"))
-            request.finish()
+        # def handle_error(failure):
+        #     request.setResponseCode(500)
+        #     request.write(json.dumps({"error": str(failure)}).encode("utf-8"))
+        #     request.finish()
 
-        d.addCallbacks(write_response, handle_error)
+        # d.addCallbacks(write_response, handle_error)
         return server.NOT_DONE_YET
+    
+    @defer.inlineCallbacks
+    def handle_request(self, request):
+        try:
+            result = yield threads.deferToThread(long_blocking_task)
+            request.write(json.dumps(result).encode("utf-8"))
+        except Exception as e:
+            request.setResponseCode(500)
+            request.write(json.dumps({"error": str(e)}).encode("utf-8"))
+        finally:
+            request.finish()
 
 # Simulate a blocking operation on the main thread (BAD)
 class BlockedResource(resource.Resource):
